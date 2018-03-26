@@ -7,7 +7,7 @@ Feel free to use, adapt or improve the code.  Feel free to send those changes ba
 ![alt text](https://raw.githubusercontent.com/ElectroMagus/M5-FFT/master/FFT%20Demo.jpg)
 
 
-M5Stack Information
+[M5Stack Information] (http://www.m5stack.com/)
 It's powered by an ESP32 and is tightly integrated with the following hardware:
 - Modular design to allow for custom hardware additions
 - 3 Buttons
