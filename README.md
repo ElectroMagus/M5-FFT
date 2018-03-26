@@ -4,7 +4,7 @@ It uses the basic Arduino FFT library which was designed for 8 bit microcontroll
 
 Feel free to use, adapt or improve the code.  Feel free to send those changes back in a pull request as well.
 
-
+![alt text](https://raw.githubusercontent.com/ElectroMagus/M5-FFT/master/FFT%20Demo.jpg)
 
 
 M5Stack Information
