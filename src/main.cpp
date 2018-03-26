@@ -5,7 +5,7 @@ arduinoFFT FFT = arduinoFFT();
 
 #define SCALE 512
 #define SAMPLES 1024              // Must be a power of 2
-#define SAMPLING_FREQUENCY 20000
+#define SAMPLING_FREQUENCY 80000
 //// Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
 
 struct eqBand {
@@ -21,14 +21,15 @@ struct eqBand {
 eqBand audiospectrum[8] = {
   //Adjust the amplitude values to fit your microphone
   // Lower values increase sensetivity to the freq
+  // Can be used to compensate for ambient noise in certain situations
   { "63Hz", 50, 0, 0, 0, 0},
   { "160Hz", 40, 0, 0, 0, 0},
   { "400Hz", 40, 0, 0, 0, 0},
   { "1KHz",  40, 0, 0, 0, 0},
   { "2.5KHz",  25, 0, 0, 0, 0},
   { "6.2KHz",  25, 0, 0, 0, 0},
-  { "10KHz",  25, 0, 0, 0, 0},
-  { "20KHz", 25,  0, 0, 0, 0}
+  { "10KHz",  65, 0, 0, 0, 0},
+  { "20KHz", 55,  0, 0, 0, 0}
 };
 
 unsigned int sampling_period_us;
@@ -52,25 +53,19 @@ void setup() {
   M5.Lcd.setTextSize(1);
   M5.Lcd.setRotation(0);
 
-// ADC setup// ADC Setup
+  // ADC setup
   pinMode(35, INPUT);
-  analogReadResolution(9);
-  analogSetWidth(9);
-  analogSetCycles(4);
-  analogSetSamples(4);
-  analogSetClockDiv(1);
-  analogSetAttenuation(ADC_0db);
-  adcAttachPin(35);
-
-
-
-
+  analogReadResolution(9);        // Resolution of 0-511
+  analogSetWidth(9);              // Resolution of 0-511
+  analogSetCycles(4);             // Number of cycles per sample.  Function of the SAR ADC on the ESP32.  Increases accuracy at cost of performance
+  analogSetSamples(4);            // Number of samples for the result.  Function of the SAR ADC on the ESP32.  Increases accuracy at cost of performance.
+  analogSetClockDiv(1);           // Clock divider for timing
+  analogSetAttenuation(ADC_0db);  // ADC Gain.   Valid:  0, 2_5, 6, 11
+  adcAttachPin(35);               // Set the pin your microphone is attached to.
 
   sampling_period_us = round(1000000 * (1.0 / SAMPLING_FREQUENCY));
-  //delay(50);
   for(uint8_t i=0;i<tft_height;i++) {
     colormap[i] = M5.Lcd.color565(tft_height-i, tft_height+i, i);
-    //colormap[i] = M5.Lcd.color565(tft_height-i*.5, i*1.1, 0);
   }
   for (byte band = 0; band <= 7; band++) {
     M5.Lcd.setCursor(bands_width*band + 2, 0);
@@ -79,6 +74,7 @@ void setup() {
 }
 
 
+// Graphics for the Equalizer
 void displayBand(int band, int dsize){
   uint16_t hpos = bands_width*band;
   int dmax = 200;
@@ -102,8 +98,10 @@ void displayBand(int band, int dsize){
 }
 
 
+// Associates the frequency to the appropriate band being displayed.
+// If you modify the resolution of the ADC, be sure to update these appropriately.
+// These were loosley calibrated using a tone generator.
 byte getBand(int i) {
-  //Serial.println(i);
   if (i<=4 )             return 0;  // 125Hz
   if (i >6   && i<=10 )   return 1;  // 250Hz
   if (i >10   && i<=14 )   return 2;  // 500Hz
@@ -115,17 +113,6 @@ byte getBand(int i) {
   return 8;
 }
 
-/*
-if (i<=2 )             return 0;  // 125Hz
-if (i >3   && i<=5 )   return 1;  // 250Hz
-if (i >5   && i<=7 )   return 2;  // 500Hz
-if (i >7   && i<=15 )  return 3;  // 1000Hz
-if (i >15  && i<=30 )  return 4;  // 2000Hz
-if (i >30  && i<=53 )  return 5;  // 4000Hz
-if (i >53  && i<=200 ) return 6;  // 8000Hz
-if (i >200           ) return 7;  // 16000Hz
-return 8;
-*/
 
 
 void loop() {
@@ -134,31 +121,24 @@ void loop() {
     newTime = micros()-oldTime;
     oldTime = newTime;
     vReal[i] = adcEnd(35);
-    //Serial.println(vReal[i]);
-    //vReal[i] = analogRead(35); // A conversion takes about 1uS on an ESP32
     vImag[i] = 0;
-    //while (micros() < (newTime + sampling_period_us)) {
-      // do nothing to wait
-    //}
   }
   FFT.Windowing(vReal, SAMPLES, FFT_WIN_TYP_HAMMING, FFT_FORWARD);
   FFT.Compute(vReal, vImag, SAMPLES, FFT_FORWARD);
   FFT.ComplexToMagnitude(vReal, vImag, SAMPLES);
 
   for (int i = 2; i < (SAMPLES/2); i++){
-
-    // Each array eleement represents a frequency and its value the amplitude.
-    if (vReal[i] > 500) { // Add a crude noise filter, 10 x amplitude or more
+    // Each array element represents a frequency and its value the amplitude.
+    if (vReal[i] > 500) { // Add a crude noise filter
       byte bandNum = getBand(i);
       if(bandNum!=8) {
         displayBand(bandNum, (int)vReal[i]/audiospectrum[bandNum].amplitude);
       }
     }
   }
-
   long vnow = millis();
   for (byte band = 0; band <= 7; band++) {
-    // auto decay every 50ms on low activity bands
+    // auto decay every 135ms on low activity bands
     if(vnow - audiospectrum[band].lastmeasured > 135) {
       displayBand(band, audiospectrum[band].lastval>4 ? audiospectrum[band].lastval-4 : 0);
     }
@@ -170,11 +150,10 @@ void loop() {
     }
     // only draw if peak changed
     if(audiospectrum[band].lastpeak != audiospectrum[band].peak) {
-      // delete last peak
-     M5.Lcd.drawFastHLine(bands_width*band,tft_height-audiospectrum[band].lastpeak,bands_pad,BLACK);
-     audiospectrum[band].lastpeak = audiospectrum[band].peak;
-     M5.Lcd.drawFastHLine(bands_width*band, tft_height-audiospectrum[band].peak,
-                           bands_pad, colormap[tft_height-audiospectrum[band].peak]);
+    // delete last peak
+      M5.Lcd.drawFastHLine(bands_width*band,tft_height-audiospectrum[band].lastpeak,bands_pad,BLACK);
+      audiospectrum[band].lastpeak = audiospectrum[band].peak;
+      M5.Lcd.drawFastHLine(bands_width*band, tft_height-audiospectrum[band].peak,bands_pad, colormap[tft_height-audiospectrum[band].peak]);
     }
   }
 }
