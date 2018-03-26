@@ -3,9 +3,9 @@
 arduinoFFT FFT = arduinoFFT();
 #include <M5Stack.h>
 
-#define SCALE 128
-#define SAMPLES 512              // Must be a power of 2
-#define SAMPLING_FREQUENCY 80000
+#define SCALE 256
+#define SAMPLES 1024              // Must be a power of 2
+#define SAMPLING_FREQUENCY 40000
 //// Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
 
 struct eqBand {
@@ -21,14 +21,14 @@ struct eqBand {
 eqBand audiospectrum[8] = {
   //Adjust the amplitude values to fit your microphone
   // Lower values increase sensetivity to the freq
-  { "63Hz", 160, 0, 0, 0, 0},
-  { "160Hz", 160, 0, 0, 0, 0},
-  { "400Hz", 120, 0, 0, 0, 0},
-  { "1KHz",  100, 0, 0, 0, 0},
-  { "2.5KHz",  50, 0, 0, 0, 0},
-  { "6.2KHz",  30, 0, 0, 0, 0},
-  { "10KHz",  30, 0, 0, 0, 0},
-  { "20KHz", 30,  0, 0, 0, 0}
+  { "63Hz", 100, 0, 0, 0, 0},
+  { "160Hz", 100, 0, 0, 0, 0},
+  { "400Hz", 100, 0, 0, 0, 0},
+  { "1KHz",  200, 0, 0, 0, 0},
+  { "2.5KHz",  200, 0, 0, 0, 0},
+  { "6.2KHz",  200, 0, 0, 0, 0},
+  { "10KHz",  200, 0, 0, 0, 0},
+  { "20KHz", 200,  0, 0, 0, 0}
 };
 
 unsigned int sampling_period_us;
@@ -54,10 +54,10 @@ void setup() {
 
 // ADC setup// ADC Setup
   pinMode(35, INPUT);
-  analogReadResolution(12);
-  analogSetWidth(12);
-  analogSetCycles(16);
-  analogSetSamples(2);
+  analogReadResolution(9);
+  analogSetWidth(9);
+  analogSetCycles(8);
+  analogSetSamples(1);
   analogSetClockDiv(1);
   analogSetAttenuation(ADC_0db);
   adcAttachPin(35);
@@ -101,34 +101,31 @@ void displayBand(int band, int dsize){
   audiospectrum[band].lastmeasured = millis();
 }
 
+
+byte getBand(int i) {
+  Serial.println(i);
+  if (i<=4 )             return 0;  // 125Hz
+  if (i >6   && i<=10 )   return 1;  // 250Hz
+  if (i >10   && i<=14 )   return 2;  // 500Hz
+  if (i >14   && i<=30 )  return 3;  // 1000Hz
+  if (i >30  && i<=60 )  return 4;  // 2000Hz
+  if (i >60  && i<=106 )  return 5;  // 4000Hz
+  if (i >106  && i<=400 ) return 6;  // 8000Hz
+  if (i >400           ) return 7;  // 16000Hz
+  return 8;
+}
+
 /*
-byte getBand(int i) {
-  if (i<=2 )             return 0;  // 125Hz
-  if (i >3   && i<=5 )   return 1;  // 250Hz
-  if (i >5   && i<=7 )   return 2;  // 500Hz
-  if (i >7   && i<=15 )  return 3;  // 1000Hz
-  if (i >15  && i<=30 )  return 4;  // 2000Hz
-  if (i >30  && i<=53 )  return 5;  // 4000Hz
-  if (i >75  && i<=180 ) return 6;  // 8000Hz
-  if (i >200           ) return 7;  // 16000Hz
-  return 8;
-}
+if (i<=2 )             return 0;  // 125Hz
+if (i >3   && i<=5 )   return 1;  // 250Hz
+if (i >5   && i<=7 )   return 2;  // 500Hz
+if (i >7   && i<=15 )  return 3;  // 1000Hz
+if (i >15  && i<=30 )  return 4;  // 2000Hz
+if (i >30  && i<=53 )  return 5;  // 4000Hz
+if (i >53  && i<=200 ) return 6;  // 8000Hz
+if (i >200           ) return 7;  // 16000Hz
+return 8;
 */
-
-
-byte getBand(int i) {
-  if (i<=2 )             return 0;  // 125Hz
-  if (i >3   && i<=5 )   return 1;  // 250Hz
-  if (i >5   && i<=7 )   return 2;  // 500Hz
-  if (i >7   && i<=15 )  return 3;  // 1000Hz
-  if (i >15  && i<=30 )  return 4;  // 2000Hz
-  if (i >30  && i<=53 )  return 5;  // 4000Hz
-  if (i >53  && i<=200 ) return 6;  // 8000Hz
-  if (i >200           ) return 7;  // 16000Hz
-  return 8;
-}
-
-
 
 
 void loop() {
@@ -137,6 +134,7 @@ void loop() {
     newTime = micros()-oldTime;
     oldTime = newTime;
     vReal[i] = adcEnd(35);
+    //Serial.println(vReal[i]);
     //vReal[i] = analogRead(35); // A conversion takes about 1uS on an ESP32
     vImag[i] = 0;
     while (micros() < (newTime + sampling_period_us)) {
@@ -150,7 +148,7 @@ void loop() {
   for (int i = 2; i < (SAMPLES/2); i++){
 
     // Each array eleement represents a frequency and its value the amplitude.
-    if (vReal[i] > 1500) { // Add a crude noise filter, 10 x amplitude or more
+    if (vReal[i] > 500) { // Add a crude noise filter, 10 x amplitude or more
       byte bandNum = getBand(i);
       if(bandNum!=8) {
         displayBand(bandNum, (int)vReal[i]/audiospectrum[bandNum].amplitude);
