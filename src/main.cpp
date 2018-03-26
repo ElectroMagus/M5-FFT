@@ -3,9 +3,9 @@
 arduinoFFT FFT = arduinoFFT();
 #include <M5Stack.h>
 
-#define SCALE 256
+#define SCALE 512
 #define SAMPLES 1024              // Must be a power of 2
-#define SAMPLING_FREQUENCY 40000
+#define SAMPLING_FREQUENCY 20000
 //// Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
 
 struct eqBand {
@@ -21,14 +21,14 @@ struct eqBand {
 eqBand audiospectrum[8] = {
   //Adjust the amplitude values to fit your microphone
   // Lower values increase sensetivity to the freq
-  { "63Hz", 100, 0, 0, 0, 0},
-  { "160Hz", 100, 0, 0, 0, 0},
-  { "400Hz", 100, 0, 0, 0, 0},
-  { "1KHz",  200, 0, 0, 0, 0},
-  { "2.5KHz",  200, 0, 0, 0, 0},
-  { "6.2KHz",  200, 0, 0, 0, 0},
-  { "10KHz",  200, 0, 0, 0, 0},
-  { "20KHz", 200,  0, 0, 0, 0}
+  { "63Hz", 50, 0, 0, 0, 0},
+  { "160Hz", 40, 0, 0, 0, 0},
+  { "400Hz", 40, 0, 0, 0, 0},
+  { "1KHz",  40, 0, 0, 0, 0},
+  { "2.5KHz",  25, 0, 0, 0, 0},
+  { "6.2KHz",  25, 0, 0, 0, 0},
+  { "10KHz",  25, 0, 0, 0, 0},
+  { "20KHz", 25,  0, 0, 0, 0}
 };
 
 unsigned int sampling_period_us;
@@ -56,8 +56,8 @@ void setup() {
   pinMode(35, INPUT);
   analogReadResolution(9);
   analogSetWidth(9);
-  analogSetCycles(8);
-  analogSetSamples(1);
+  analogSetCycles(4);
+  analogSetSamples(4);
   analogSetClockDiv(1);
   analogSetAttenuation(ADC_0db);
   adcAttachPin(35);
@@ -67,7 +67,7 @@ void setup() {
 
 
   sampling_period_us = round(1000000 * (1.0 / SAMPLING_FREQUENCY));
-  delay(50);
+  //delay(50);
   for(uint8_t i=0;i<tft_height;i++) {
     colormap[i] = M5.Lcd.color565(tft_height-i, tft_height+i, i);
     //colormap[i] = M5.Lcd.color565(tft_height-i*.5, i*1.1, 0);
@@ -103,7 +103,7 @@ void displayBand(int band, int dsize){
 
 
 byte getBand(int i) {
-  Serial.println(i);
+  //Serial.println(i);
   if (i<=4 )             return 0;  // 125Hz
   if (i >6   && i<=10 )   return 1;  // 250Hz
   if (i >10   && i<=14 )   return 2;  // 500Hz
@@ -137,9 +137,9 @@ void loop() {
     //Serial.println(vReal[i]);
     //vReal[i] = analogRead(35); // A conversion takes about 1uS on an ESP32
     vImag[i] = 0;
-    while (micros() < (newTime + sampling_period_us)) {
+    //while (micros() < (newTime + sampling_period_us)) {
       // do nothing to wait
-    }
+    //}
   }
   FFT.Windowing(vReal, SAMPLES, FFT_WIN_TYP_HAMMING, FFT_FORWARD);
   FFT.Compute(vReal, vImag, SAMPLES, FFT_FORWARD);
