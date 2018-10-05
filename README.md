@@ -1,4 +1,5 @@
-This is a basic FFT to create a graphic equalizer of audio data received by microphone (MAX9814 in this case).   I wrote it to explore the capabilities of the ESP32 Analog to Digital Converter as well as the very nice M5Stack platform.
+This is an adaptation of [G6EJD](https://github.com/G6EJD/)'s [Audio Spectrum Display](https://github.com/G6EJD/ESP32-8-Octave-Audio-Spectrum-Display) using basic FFT to create a graphic equalizer of audio data received by microphone (MAX9814 in this case).   
+I wrote it to explore the capabilities of the ESP32 Analog to Digital Converter as well as the very nice M5Stack platform.
 
 It uses the basic Arduino FFT library which was designed for 8 bit microcontrollers making it very efficient. The graphics were adapted from various sources to work on the M5Stack display.  Future enhancements will utilize the hardware capabilities of the M5Stack platform and the extra oomph from the ESP32 platform.
 
